@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fútbol Math - Juegos</title>
+    <!-- Tailwind CSS para diseño rápido y moderno -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen font-sans pb-16">
+
+    <!-- ==========================================
+         JUEGO 3: LA ECUACIÓN DEL FICHAJE (WORDLE)
+         ========================================== -->
+    <div class="max-w-4xl mx-auto pt-12 px-4 text-center">
+        <h1 class="text-4xl font-bold text-green-400 mb-2">La Ecuación del Fichaje</h1>
+        <p class="text-gray-400 mb-8">Adivina el jugador oculto de hoy (Pista: Juega en el Real Madrid)</p>
+
+        <!-- Buscador -->
+        <div class="flex justify-center gap-2 mb-8">
+            <input type="text" id="inputJugador" placeholder="Ej: Vinicius Junior" 
+                   class="px-4 py-2 w-64 rounded bg-gray-800 border border-gray-700 focus:outline-none focus:border-green-400">
+            <button onclick="intentarFichaje()" class="bg-green-600 hover:bg-green-500 px-6 py-2 rounded font-bold transition">
+                Adivinar
+            </button>
+        </div>
+
+        <!-- Cabecera de la tabla -->
+        <div class="grid grid-cols-6 gap-2 font-bold text-sm text-gray-400 mb-2 hidden" id="cabecera-grid">
+            <div>Jugador</div>
+            <div>Nación</div>
+            <div>Liga</div>
+            <div>Equipo</div>
+            <div>Posición</div>
+            <div>Edad</div>
+        </div>
+
+        <!-- Contenedor donde aparecerán los intentos -->
+        <div id="grid-intentos" class="flex flex-col gap-2"></div>
+    </div>
+
+    <!-- SEPARADOR -->
+    <hr class="border-gray-700 my-12 mx-auto max-w-2xl">
+
+    <!-- ==========================================
+         JUEGO 1: EL GRAFO DE TRASPASOS (DIJKSTRA)
+         ========================================== -->
+    <div class="max-w-4xl mx-auto px-4 text-center mb-16">
+        <h2 class="text-3xl font-bold text-blue-400 mb-2">El Grafo de Traspasos</h2>
+        <p class="text-gray-400 mb-8">Encuentra la conexión matemática más corta entre dos jugadores a través de los clubes en los que han jugado.</p>
+
+        <div class="flex flex-col md:flex-row justify-center gap-4 mb-6">
+            <input type="text" id="origen" placeholder="Ej: Vinicius Junior" class="px-4 py-2 w-64 rounded bg-gray-800 border border-gray-700 focus:outline-none focus:border-blue-400">
+            <span class="text-2xl text-gray-500 self-center">🔗</span>
+            <input type="text" id="destino" placeholder="Ej: Erling Haaland" class="px-4 py-2 w-64 rounded bg-gray-800 border border-gray-700 focus:outline-none focus:border-blue-400">
+        </div>
+        
+        <button onclick="calcularGrafo()" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded font-bold transition mb-8">
+            Calcular Camino Óptimo
+        </button>
+
+        <!-- Contenedor del resultado del grafo -->
+        <div id="resultado-grafo" class="text-lg flex flex-wrap justify-center items-center gap-2"></div>
+    </div>
+
+    <!-- ==========================================
+         LÓGICA JAVASCRIPT DE AMBOS JUEGOS
+         ========================================== -->
+    <script>
+        // --- LÓGICA DEL WORDLE ---
+        function getEstiloCelda(estado) {
+            const base = "p-3 rounded font-bold text-sm md:text-base flex items-center justify-center border border-gray-800 ";
+            if (estado === "verde") return base + "bg-green-600";
+            if (estado === "rojo") return base + "bg-gray-700";
+            if (estado === "rojo_flecha_arriba") return base + "bg-gray-700 after:content-['↑'] after:ml-1";
+            if (estado === "rojo_flecha_abajo") return base + "bg-gray-700 after:content-['↓'] after:ml-1";
+            return base + "bg-gray-800"; // Por defecto
+        }
+
+        async function intentarFichaje() {
+            const nombreInput = document.getElementById("inputJugador").value;
+            if (!nombreInput) return;
+
+            try {
+                const respuesta = await fetch(`/juego/fichaje/${nombreInput}`);
+                
+                if (respuesta.status === 404) {
+                    alert("Jugador no encontrado en la base de datos de prueba.");
+                    return;
+                }
+
+                const datos = await respuesta.json();
+                document.getElementById("cabecera-grid").classList.remove("hidden");
+
+                const fila = document.createElement("div");
+                fila.className = "grid grid-cols-6 gap-2 transition-all duration-500 animate-fade-in";
+                
+                fila.innerHTML = `
+                    <div class="${getEstiloCelda('default')}">${datos.nombre}</div>
+                    <div class="${getEstiloCelda(datos.nacionalidad)}">Nación</div>
+                    <div class="${getEstiloCelda(datos.liga)}">Liga</div>
+                    <div class="${getEstiloCelda(datos.equipo_actual)}">Equipo</div>
+                    <div class="${getEstiloCelda(datos.posicion)}">Pos</div>
+                    <div class="${getEstiloCelda(datos.edad)}">Edad</div>
+                `;
+
+                const grid = document.getElementById("grid-intentos");
+                grid.insertBefore(fila, grid.firstChild);
+                
+                document.getElementById("inputJugador").value = "";
+
+            } catch (error) {
+                console.error("Error:", error);
+            }
+        }
+
+        // --- LÓGICA DEL GRAFO ---
+        async function calcularGrafo() {
+            const origen = document.getElementById("origen").value;
+            const destino = document.getElementById("destino").value;
+            const contenedor = document.getElementById("resultado-grafo");
+
+            if (!origen || !destino) return;
+            
+            contenedor.innerHTML = "<span class='text-gray-400 animate-pulse'>Calculando ruta con el algoritmo de Dijkstra...</span>";
+
+            try {
+                const respuesta = await fetch(`/juego/grafo/${origen}/${destino}`);
+                const datos = await respuesta.json();
+
+                if (!respuesta.ok || !datos.conectados) {
+                    contenedor.innerHTML = `<span class="text-red-400">Error: ${datos.detail || datos.mensaje}</span>`;
+                    return;
+                }
+
+                let htmlCamino = "";
+                datos.camino_optimo.forEach((nodo, index) => {
+                    if (index % 2 === 0) {
+                        htmlCamino += `<span class="bg-gray-800 text-white px-3 py-1 rounded-full border border-gray-600">${nodo}</span>`;
+                    } else {
+                        htmlCamino += `<span class="text-blue-400 font-bold mx-2"> ➔ ${nodo} ➔ </span>`;
+                    }
+                });
+
+                contenedor.innerHTML = `
+                    <div class="w-full mb-4 text-green-400 font-bold">¡Conectados en ${datos.pasos_jugadores} pasos (jugadores intermediarios)!</div>
+                    <div class="flex flex-wrap justify-center items-center">${htmlCamino}</div>
+                `;
+
+            } catch (error) {
+                console.error("Error:", error);
+                contenedor.innerHTML = `<span class="text-red-400">Error de conexión con el servidor.</span>`;
+            }
+        }
+    </script>
+</body>
+</html>
