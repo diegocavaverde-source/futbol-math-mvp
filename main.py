@@ -1,23 +1,23 @@
-# main.py
-from fastapi import FastAPI, Depends, HTTPException
-from fastapi.responses import FileResponse
-from sqlalchemy.orm import Session
-import networkx as nx
-import models
+import os
+from dotenv import load_dotenv
+from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey
+from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 
-app = FastAPI(title="Fútbol Math API")
+# Cargar las variables del archivo .env
+load_dotenv()
 
-@app.get("/")
-def pagina_principal():
-    return FileResponse("index.html")
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./futbol.db")
 
-# Dependencia para obtener la sesión de la base de datos
-def get_db():
-    db = models.SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# Configuración condicional: PostgreSQL vs SQLite
+if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    # Algunos drivers prefieren postgresql:// en lugar de postgres://
+    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    engine = create_engine(SQLALCHEMY_DATABASE_URL)
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
 
 # --- DATOS DE PRUEBA (Para no empezar con la base de datos vacía) ---
 @app.post("/inicializar-datos/")
