@@ -3,154 +3,358 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fútbol Math - Juegos</title>
-    <!-- Tailwind CSS para diseño rápido y moderno -->
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-900 text-white min-h-screen font-sans pb-16">
-
-    <!-- ==========================================
-         JUEGO 3: LA ECUACIÓN DEL FICHAJE (WORDLE)
-         ========================================== -->
-    <div class="max-w-4xl mx-auto pt-12 px-4 text-center">
-        <h1 class="text-4xl font-bold text-green-400 mb-2">La Ecuación del Fichaje</h1>
-        <p class="text-gray-400 mb-8">Adivina el jugador oculto de hoy (Pista: Juega en el Real Madrid)</p>
-
-        <!-- Buscador -->
-        <div class="flex justify-center gap-2 mb-8">
-            <input type="text" id="inputJugador" placeholder="Ej: Luka Modric" 
-                   class="px-4 py-2 w-64 rounded bg-gray-800 border border-gray-700 focus:outline-none focus:border-green-400">
-            <button onclick="intentarFichaje()" class="bg-green-600 hover:bg-green-500 px-6 py-2 rounded font-bold transition">
-                Adivinar
-            </button>
-        </div>
-
-        <!-- Cabecera de la tabla -->
-        <div class="grid grid-cols-6 gap-2 font-bold text-sm text-gray-400 mb-2 hidden" id="cabecera-grid">
-            <div>Jugador</div>
-            <div>Nación</div>
-            <div>Liga</div>
-            <div>Equipo</div>
-            <div>Posición</div>
-            <div>Edad</div>
-        </div>
-
-        <!-- Contenedor donde aparecerán los intentos -->
-        <div id="grid-intentos" class="flex flex-col gap-2"></div>
-    </div>
-
-    <!-- SEPARADOR -->
-    <hr class="border-gray-700 my-12 mx-auto max-w-2xl">
-
-    <!-- ==========================================
-         JUEGO 1: EL GRAFO DE TRASPASOS (DIJKSTRA)
-         ========================================== -->
-    <div class="max-w-4xl mx-auto px-4 text-center mb-16">
-        <h2 class="text-3xl font-bold text-blue-400 mb-2">El Grafo de Traspasos</h2>
-        <p class="text-gray-400 mb-8">Encuentra la conexión matemática más corta entre dos jugadores a través de los clubes en los que han jugado.</p>
-
-        <div class="flex flex-col md:flex-row justify-center gap-4 mb-6">
-            <input type="text" id="origen" placeholder="Ej: Vinivius Junior" class="px-4 py-2 w-64 rounded bg-gray-800 border border-gray-700 focus:outline-none focus:border-blue-400">
-            <span class="text-2xl text-gray-500 self-center">🔗</span>
-            <input type="text" id="destino" placeholder="Ej: Erling Haaland" class="px-4 py-2 w-64 rounded bg-gray-800 border border-gray-700 focus:outline-none focus:border-blue-400">
-        </div>
+    <title>Futbol Math - Wordle</title>
+    <!-- Librería de Confeti por CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background-color: #1a1a2e; color: white; margin: 0; padding: 20px; transition: all 0.3s ease; }
+        h1 { color: #4ade80; margin-bottom: 5px; }
         
-        <button onclick="calcularGrafo()" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded font-bold transition mb-8">
-            Calcular Camino Óptimo
-        </button>
+        .header-botones { display: flex; justify-content: center; gap: 15px; margin-bottom: 20px; }
+        .btn-icono { background: #0f3460; border: none; font-size: 20px; padding: 8px 12px; border-radius: 5px; cursor: pointer; color: white; transition: 0.2s; }
+        .btn-icono:hover { background: #16213e; transform: scale(1.1); }
 
-        <!-- Contenedor del resultado del grafo -->
-        <div id="resultado-grafo" class="text-lg flex flex-wrap justify-center items-center gap-2"></div>
+        #dificultad-container { margin-top: 40px; }
+        .btn-dificultad { padding: 15px 30px; font-size: 18px; cursor: pointer; border: none; border-radius: 8px; font-weight: bold; margin: 10px; transition: transform 0.2s; }
+        .btn-facil { background-color: #4ade80; color: #1a1a2e; }
+        .btn-dificil { background-color: #f87171; color: white; }
+        .btn-dificultad:hover { transform: scale(1.05); }
+
+        #juego-container { display: none; }
+        
+        .buscador { margin-bottom: 20px; position: relative; display: inline-block; }
+        input { padding: 12px; font-size: 16px; border-radius: 5px; border: none; width: 250px; outline: none; }
+        
+        .sugerencias { position: absolute; top: 100%; left: 0; right: 0; background-color: #16213e; border: 2px solid #4ade80; border-radius: 0 0 5px 5px; z-index: 999; max-height: 180px; overflow-y: auto; text-align: left; }
+        .sugerencia-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #0f3460; font-size: 14px; color: white; }
+        .sugerencia-item:hover { background-color: #4ade80; color: #1a1a2e; font-weight: bold; }
+
+        button.adivinar { padding: 12px 20px; font-size: 16px; cursor: pointer; background-color: #4ade80; color: #1a1a2e; border: none; border-radius: 5px; font-weight: bold; margin-left: 10px; }
+        
+        .tablero { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 20px; }
+        .fila { display: flex; gap: 8px; animation: popIn 0.3s ease-in-out forwards; }
+        .caja { width: 85px; height: 85px; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 12px; font-weight: bold; border-radius: 8px; background-color: #16213e; border: 2px solid #0f3460; text-align: center; padding: 4px; box-sizing: border-box; overflow: hidden; }
+        .caja span.etiqueta { font-size: 9px; opacity: 0.7; margin-bottom: 4px; }
+        
+        .verde { background-color: #22c55e; border-color: #16a34a; color: white; }
+        .gris { background-color: #475569; border-color: #334155; color: white; }
+        
+        #mensaje { margin-top: 10px; font-size: 1.2em; font-weight: bold; height: 30px; }
+        
+        /* Modal de Estadísticas */
+        #modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; }
+        #stats-modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #16213e; padding: 30px; border: 2px solid #4ade80; border-radius: 12px; z-index: 1001; width: 300px; text-align: center; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0; }
+        .stat-box { background: #0f3460; padding: 15px; border-radius: 8px; }
+        .stat-numero { font-size: 24px; font-weight: bold; color: #4ade80; }
+        .stat-texto { font-size: 12px; opacity: 0.8; margin-top: 5px; }
+        
+        .btn-modal { padding: 10px 15px; font-size: 16px; cursor: pointer; border: none; border-radius: 5px; font-weight: bold; margin: 5px; width: 100%; }
+        .btn-compartir { background-color: #fbbf24; color: #1a1a2e; }
+        .btn-cerrar { background-color: #475569; color: white; }
+        
+        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 50% { transform: scale(1.1); } 100% { transform: scale(1); opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <h1>⚽ Futbol Math</h1>
+    <div class="header-botones">
+        <button class="btn-icono" onclick="mostrarStats()" title="Estadísticas">📊</button>
+        <div id="racha-container" style="font-size: 1.2em; font-weight: bold; margin-top: 8px; color: #fbbf24;">
+            Racha: <span id="racha-numero">0</span> 🔥
+        </div>
     </div>
 
-    <!-- ==========================================
-         LÓGICA JAVASCRIPT DE AMBOS JUEGOS
-         ========================================== -->
+    <!-- Selección de dificultad -->
+    <div id="dificultad-container">
+        <h2>Elige la dificultad de esta ronda:</h2>
+        <button class="btn-dificultad btn-facil" onclick="iniciarJuego('facil')">🌟 Fácil (Solo Estrellas)</button>
+        <button class="btn-dificultad btn-dificil" onclick="iniciarJuego('dificil')">🔥 Difícil (Expertos)</button>
+    </div>
+
+    <!-- Contenedor del juego -->
+    <div id="juego-container">
+        <p id="texto-intentos" style="color: #cbd5e1; font-weight: bold; margin-bottom: 20px;">Intentos: 0 / 10</p>
+        
+        <div class="buscador">
+            <input type="text" id="input-jugador" placeholder="Ej. vini, haaland..." autocomplete="off" oninput="buscarJugadores()">
+            <div id="lista-sugerencias" class="sugerencias"></div>
+            <button class="adivinar" onclick="enviarIntento()">Adivinar</button>
+        </div>
+
+        <div id="mensaje"></div>
+        <button id="btn-siguiente" onclick="resetearMenu()" style="display: none; margin-top: 15px; background-color: #fbbf24; color: #1a1a2e; padding: 12px; font-weight: bold; border-radius: 5px; cursor: pointer; border: none;">Siguiente Jugador ➡️</button>
+
+        <div class="tablero" id="tablero"></div>
+    </div>
+
+    <!-- Modal de Estadísticas -->
+    <div id="modal-overlay"></div>
+    <div id="stats-modal">
+        <h2>Estadísticas</h2>
+        <div class="stats-grid">
+            <div class="stat-box"><div class="stat-numero" id="stat-jugadas">0</div><div class="stat-texto">Jugadas</div></div>
+            <div class="stat-box"><div class="stat-numero"><span id="stat-porcentaje">0</span>%</div><div class="stat-texto">Victorias</div></div>
+            <div class="stat-box"><div class="stat-numero" id="stat-racha">0</div><div class="stat-texto">Racha Actual</div></div>
+            <div class="stat-box"><div class="stat-numero" id="stat-max-racha">0</div><div class="stat-texto">Racha Máxima</div></div>
+        </div>
+        <button class="btn-modal btn-compartir" id="btn-share" onclick="compartirResultado()" style="display: none;">Compartir Resultado 📤</button>
+        <button class="btn-modal btn-cerrar" onclick="cerrarStats()">Cerrar</button>
+    </div>
+
     <script>
-        // --- LÓGICA DEL WORDLE ---
-        function getEstiloCelda(estado) {
-            const base = "p-3 rounded font-bold text-sm md:text-base flex items-center justify-center border border-gray-800 ";
-            if (estado === "verde") return base + "bg-green-600";
-            if (estado === "rojo") return base + "bg-gray-700";
-            if (estado === "rojo_flecha_arriba") return base + "bg-gray-700 after:content-['↑'] after:ml-1";
-            if (estado === "rojo_flecha_abajo") return base + "bg-gray-700 after:content-['↓'] after:ml-1";
-            return base + "bg-gray-800"; // Por defecto
-        }
+        let jugadorOculto = null;
+        let jugadorSeleccionado = null;
+        let intentos = 0;
+        const MAX_INTENTOS = 10;
+        let dificultadActual = "facil";
+        let cuadriculaEmojis = "";
 
-        async function intentarFichaje() {
-            const nombreInput = document.getElementById("inputJugador").value;
-            if (!nombreInput) return;
+        let stats = JSON.parse(localStorage.getItem('futbolMathStats')) || { jugadas: 0, ganadas: 0, rachaActual: 0, rachaMaxima: 0 };
+        document.getElementById("racha-numero").innerText = stats.rachaActual;
 
+        // Generador de sonidos sintéticos (Web Audio API)
+        function reproducirSonido(tipo) {
             try {
-                const respuesta = await fetch(`/juego/fichaje/${nombreInput}`);
-                
-                if (respuesta.status === 404) {
-                    alert("Jugador no encontrado en la base de datos de prueba.");
-                    return;
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (tipo === 'victoria') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.4);
+                } else if (tipo === 'error') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                    osc.frequency.setValueAtTime(100, audioCtx.currentTime + 0.15);
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.3);
                 }
-
-                const datos = await respuesta.json();
-                document.getElementById("cabecera-grid").classList.remove("hidden");
-
-                const fila = document.createElement("div");
-                fila.className = "grid grid-cols-6 gap-2 transition-all duration-500 animate-fade-in";
-                
-                fila.innerHTML = `
-                    <div class="${getEstiloCelda('default')}">${datos.nombre}</div>
-                    <div class="${getEstiloCelda(datos.nacionalidad)}">Nación</div>
-                    <div class="${getEstiloCelda(datos.liga)}">Liga</div>
-                    <div class="${getEstiloCelda(datos.equipo_actual)}">Equipo</div>
-                    <div class="${getEstiloCelda(datos.posicion)}">Pos</div>
-                    <div class="${getEstiloCelda(datos.edad)}">Edad</div>
-                `;
-
-                const grid = document.getElementById("grid-intentos");
-                grid.insertBefore(fila, grid.firstChild);
-                
-                document.getElementById("inputJugador").value = "";
-
-            } catch (error) {
-                console.error("Error:", error);
+            } catch (e) {
+                // Navegadores que bloquean audio sin interacción previa
             }
         }
 
-        // --- LÓGICA DEL GRAFO ---
-        async function calcularGrafo() {
-            const origen = document.getElementById("origen").value;
-            const destino = document.getElementById("destino").value;
-            const contenedor = document.getElementById("resultado-grafo");
-
-            if (!origen || !destino) return;
-            
-            contenedor.innerHTML = "<span class='text-gray-400 animate-pulse'>Calculando ruta con el algoritmo de Dijkstra...</span>";
+        async function iniciarJuego(nivel) {
+            dificultadActual = nivel;
+            document.getElementById("dificultad-container").style.display = "none";
+            document.getElementById("juego-container").style.display = "block";
+            document.getElementById("texto-intentos").innerText = `Intentos: 0 / ${MAX_INTENTOS}`;
+            cuadriculaEmojis = "";
+            document.getElementById("btn-share").style.display = "none";
 
             try {
-                const respuesta = await fetch(`/juego/grafo/${origen}/${destino}`);
-                const datos = await respuesta.json();
+                const res = await fetch(`http://127.0.0.1:8000/api/jugador/aleatorio?dificultad=${nivel}`);
+                jugadorOculto = await res.json();
+                console.log(`Jugador oculto (Trampa Dev):`, jugadorOculto.nombre);
+            } catch (err) {
+                console.error("Error al iniciar:", err);
+            }
+        }
 
-                if (!respuesta.ok || !datos.conectados) {
-                    contenedor.innerHTML = `<span class="text-red-400">Error: ${datos.detail || datos.mensaje}</span>`;
-                    return;
-                }
+        async function buscarJugadores() {
+            const texto = document.getElementById("input-jugador").value.trim();
+            const contenedor = document.getElementById("lista-sugerencias");
+            jugadorSeleccionado = null;
 
-                let htmlCamino = "";
-                datos.camino_optimo.forEach((nodo, index) => {
-                    if (index % 2 === 0) {
-                        htmlCamino += `<span class="bg-gray-800 text-white px-3 py-1 rounded-full border border-gray-600">${nodo}</span>`;
-                    } else {
-                        htmlCamino += `<span class="text-blue-400 font-bold mx-2"> ➔ ${nodo} ➔ </span>`;
+            if (texto.length < 2) { contenedor.innerHTML = ""; return; }
+
+            try {
+                const res = await fetch(`http://127.0.0.1:8000/api/buscar/${encodeURIComponent(texto)}`);
+                if (!res.ok) { contenedor.innerHTML = ""; return; }
+
+                const lista = await res.json();
+                contenedor.innerHTML = "";
+
+                lista.forEach(j => {
+                    const div = document.createElement("div");
+                    div.className = "sugerencia-item";
+                    div.innerText = `${j.nombre} (${j.equipo_actual})`;
+                    div.onclick = () => {
+                        document.getElementById("input-jugador").value = j.nombre;
+                        jugadorSeleccionado = j;
+                        contenedor.innerHTML = "";
+                    };
+                    contenedor.appendChild(div);
+                });
+            } catch (err) {}
+        }
+
+        async function enviarIntento() {
+            const mensaje = document.getElementById("mensaje");
+            const inputVal = document.getElementById("input-jugador").value.trim();
+            
+            if (!inputVal || intentos >= MAX_INTENTOS) return;
+
+            if (!jugadorSeleccionado) {
+                try {
+                    const res = await fetch(`http://127.0.0.1:8000/api/buscar/${encodeURIComponent(inputVal)}`);
+                    if (res.ok) {
+                        const lista = await res.json();
+                        if (lista.length > 0) jugadorSeleccionado = lista[0]; 
                     }
+                } catch (e) {}
+            }
+
+            if (!jugadorSeleccionado) {
+                mensaje.innerText = "Jugador no encontrado.";
+                mensaje.style.color = "#f87171";
+                reproducirSonido('error');
+                return;
+            }
+
+            mensaje.innerText = "";
+            intentos++;
+            document.getElementById("texto-intentos").innerText = `Intentos: ${intentos} / ${MAX_INTENTOS}`;
+            pintarFila(jugadorSeleccionado);
+
+            // Comprobamos Victoria
+            if (jugadorSeleccionado.id === jugadorOculto.id) {
+                mensaje.innerText = `¡Gooooool! Has acertado. 🎉`;
+                mensaje.style.color = "#4ade80";
+                reproducirSonido('victoria');
+                
+                // ¡Efecto de Confeti!
+                confetti({
+                    particleCount: 120,
+                    spread: 70,
+                    origin: { y: 0.6 }
                 });
 
-                contenedor.innerHTML = `
-                    <div class="w-full mb-4 text-green-400 font-bold">¡Conectados en ${datos.pasos_jugadores} pasos (jugadores intermediarios)!</div>
-                    <div class="flex flex-wrap justify-center items-center">${htmlCamino}</div>
-                `;
-
-            } catch (error) {
-                console.error("Error:", error);
-                contenedor.innerHTML = `<span class="text-red-400">Error de conexión con el servidor.</span>`;
+                finalizarPartida(true);
+            } 
+            // Comprobamos Derrota
+            else if (intentos >= MAX_INTENTOS) {
+                mensaje.innerText = `¡Fallaste! El jugador era ${jugadorOculto.nombre}.`;
+                mensaje.style.color = "#f87171";
+                reproducirSonido('error');
+                finalizarPartida(false);
+            } 
+            // Seguimos jugando
+            else {
+                document.getElementById("input-jugador").value = "";
+                jugadorSeleccionado = null;
+                document.getElementById("lista-sugerencias").innerHTML = "";
             }
+        }
+
+        function pintarFila(intento) {
+            const tablero = document.getElementById("tablero");
+            const fila = document.createElement("div");
+            fila.className = "fila";
+
+            const aciertoNacion = intento.nacionalidad === jugadorOculto.nacionalidad;
+            const aciertoLiga = intento.liga === jugadorOculto.liga;
+            const aciertoEquipo = intento.equipo_actual === jugadorOculto.equipo_actual;
+            const aciertoPos = intento.posicion === jugadorOculto.posicion;
+            
+            const nacionClase = aciertoNacion ? "verde" : "gris";
+            const ligaClase = aciertoLiga ? "verde" : "gris";
+            const equipoClase = aciertoEquipo ? "verde" : "gris";
+            const posClase = aciertoPos ? "verde" : "gris";
+            
+            let edadClase = "gris";
+            let edadFlecha = "";
+            let aciertoEdad = false;
+
+            if (intento.edad === jugadorOculto.edad) {
+                edadClase = "verde";
+                aciertoEdad = true;
+            } else if (intento.edad > jugadorOculto.edad) {
+                edadFlecha = " ⬇️";
+            } else {
+                edadFlecha = " ⬆️";
+            }
+
+            let filaEmojis = "";
+            filaEmojis += aciertoNacion ? "🟩" : "⬛";
+            filaEmojis += aciertoLiga ? "🟩" : "⬛";
+            filaEmojis += aciertoEquipo ? "🟩" : "⬛";
+            filaEmojis += aciertoPos ? "🟩" : "⬛";
+            filaEmojis += aciertoEdad ? "🟩" : (intento.edad > jugadorOculto.edad ? "⬇️" : "⬆️");
+            cuadriculaEmojis += filaEmojis + "\n";
+
+            fila.innerHTML = `
+                <div class="caja"><span class="etiqueta">NOMBRE</span>${intento.nombre}</div>
+                <div class="caja ${nacionClase}"><span class="etiqueta">NACIÓN</span>${intento.nacionalidad}</div>
+                <div class="caja ${ligaClase}"><span class="etiqueta">LIGA</span>${intento.liga}</div>
+                <div class="caja ${equipoClase}"><span class="etiqueta">EQUIPO</span>${intento.equipo_actual}</div>
+                <div class="caja ${posClase}"><span class="etiqueta">POS</span>${intento.posicion}</div>
+                <div class="caja ${edadClase}"><span class="etiqueta">EDAD</span>${intento.edad}${edadFlecha}</div>
+            `;
+            
+            tablero.appendChild(fila);
+        }
+
+        function finalizarPartida(victoria) {
+            document.getElementById("input-jugador").disabled = true;
+            document.getElementById("btn-siguiente").style.display = "inline-block";
+            document.getElementById("btn-share").style.display = "block";
+            
+            stats.jugadas++;
+            if (victoria) {
+                stats.ganadas++;
+                stats.rachaActual++;
+                if (stats.rachaActual > stats.rachaMaxima) stats.rachaMaxima = stats.rachaActual;
+            } else {
+                stats.rachaActual = 0;
+            }
+
+            localStorage.setItem('futbolMathStats', JSON.stringify(stats));
+            document.getElementById("racha-numero").innerText = stats.rachaActual;
+            
+            setTimeout(() => mostrarStats(), 1000);
+        }
+
+        function mostrarStats() {
+            document.getElementById("stat-jugadas").innerText = stats.jugadas;
+            const porcentaje = stats.jugadas > 0 ? Math.round((stats.ganadas / stats.jugadas) * 100) : 0;
+            document.getElementById("stat-porcentaje").innerText = porcentaje;
+            document.getElementById("stat-racha").innerText = stats.rachaActual;
+            document.getElementById("stat-max-racha").innerText = stats.rachaMaxima;
+            
+            document.getElementById("modal-overlay").style.display = "block";
+            document.getElementById("stats-modal").style.display = "block";
+        }
+
+        function cerrarStats() {
+            document.getElementById("modal-overlay").style.display = "none";
+            document.getElementById("stats-modal").style.display = "none";
+        }
+
+        function compartirResultado() {
+            const estado = intentos >= MAX_INTENTOS && !document.getElementById("mensaje").innerText.includes("Gooooool") ? "X" : intentos;
+            const difTexto = dificultadActual === "facil" ? "🌟" : "🔥";
+            const textoCompartir = `⚽ Futbol Math ${difTexto}\nIntentos: ${estado}/${MAX_INTENTOS}\n\n${cuadriculaEmojis}\n¿Puedes superarlo?`;
+            
+            navigator.clipboard.writeText(textoCompartir).then(() => {
+                alert("¡Copiado al portapapeles! Ya puedes pegarlo en WhatsApp o Twitter.");
+            }).catch(err => {
+                console.error("Error al copiar: ", err);
+            });
+        }
+
+        function resetearMenu() {
+            document.getElementById("tablero").innerHTML = "";
+            document.getElementById("mensaje").innerText = "";
+            document.getElementById("input-jugador").value = "";
+            document.getElementById("input-jugador").disabled = false;
+            document.getElementById("btn-siguiente").style.display = "none";
+            document.getElementById("juego-container").style.display = "none";
+            document.getElementById("dificultad-container").style.display = "block";
+            
+            intentos = 0;
+            jugadorSeleccionado = null;
         }
     </script>
 </body>
