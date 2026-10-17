@@ -104,6 +104,9 @@
     </div>
 
     <script>
+        // URL de tu API desplegada en Render
+        const API_URL = "https://futbol-math-mvp.onrender.com";
+
         let jugadorOculto = null;
         let jugadorSeleccionado = null;
         let intentos = 0;
@@ -140,9 +143,7 @@
                     osc.start();
                     osc.stop(audioCtx.currentTime + 0.3);
                 }
-            } catch (e) {
-                // Navegadores que bloquean audio sin interacción previa
-            }
+            } catch (e) {}
         }
 
         async function iniciarJuego(nivel) {
@@ -154,7 +155,7 @@
             document.getElementById("btn-share").style.display = "none";
 
             try {
-                const res = await fetch(`http://127.0.0.1:8000/api/jugador/aleatorio?dificultad=${nivel}`);
+                const res = await fetch(`${API_URL}/api/jugador/aleatorio?dificultad=${nivel}`);
                 jugadorOculto = await res.json();
                 console.log(`Jugador oculto (Trampa Dev):`, jugadorOculto.nombre);
             } catch (err) {
@@ -170,7 +171,7 @@
             if (texto.length < 2) { contenedor.innerHTML = ""; return; }
 
             try {
-                const res = await fetch(`http://127.0.0.1:8000/api/buscar/${encodeURIComponent(texto)}`);
+                const res = await fetch(`${API_URL}/api/buscar/${encodeURIComponent(texto)}`);
                 if (!res.ok) { contenedor.innerHTML = ""; return; }
 
                 const lista = await res.json();
@@ -198,7 +199,7 @@
 
             if (!jugadorSeleccionado) {
                 try {
-                    const res = await fetch(`http://127.0.0.1:8000/api/buscar/${encodeURIComponent(inputVal)}`);
+                    const res = await fetch(`${API_URL}/api/buscar/${encodeURIComponent(inputVal)}`);
                     if (res.ok) {
                         const lista = await res.json();
                         if (lista.length > 0) jugadorSeleccionado = lista[0]; 
@@ -224,7 +225,6 @@
                 mensaje.style.color = "#4ade80";
                 reproducirSonido('victoria');
                 
-                // ¡Efecto de Confeti!
                 confetti({
                     particleCount: 120,
                     spread: 70,
